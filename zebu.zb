@@ -1,0 +1,63 @@
+
+%skip: '\t' | '\n' | ' ' | '#' [!'\n']* '\n';
+
+`literal`: ['0'-'9']+ ('.' ['0'-'9'] ['0'-'9'])?;
+
+`identifier`: ['a'-'z', 'A'-'Z', '_'] ['a'-'z', 'A'-'Z', '_', '0'-'9']*;
+
+postfix_expression
+	: `identifier` #identifier
+	| `literal` #literal
+	| '(' expression #subexpression ')'
+	;
+
+prefix_expression
+	: postfix_expression #inner
+	| '+' #plus  prefix_expression #sub
+	| '-' #minus prefix_expression #sub
+	;
+
+multiplicative_expression
+	: prefix_expression #inner
+	| multiplicative_expression #left '*' #times  prefix_expression #right
+	| multiplicative_expression #left '/' #divide prefix_expression #right
+	;
+
+additive_expression
+	: multiplicative_expression #inner
+	| additive_expression #left '+' #plus  multiplicative_expression #right
+	| additive_expression #left '-' #minus multiplicative_expression #right
+	;
+
+ternary_expression
+	: additive_expression #inner
+	| additive_expression #conditional '?' #qmark expression #true_case ':' additive_expression #false_case
+	;
+
+expression: ternary_expression #sub;
+
+assignment:
+	`identifier` #name '=' expression #expression ';';
+
+transaction:
+	postfix_expression #year
+	('/' postfix_expression #month
+		('/' postfix_expression #day
+			('@' postfix_expression #hour
+				(':' postfix_expression #minute
+					(':' postfix_expression #second)?)?)?)?)?
+	": " expression #delta ';';
+
+statement
+	: assignment #assignment
+	| transaction #transaction;
+
+%start: (statement #statements[])+;
+
+
+
+
+
+
+
+

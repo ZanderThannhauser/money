@@ -1,0 +1,1 @@
+extern const char* fragment_source;
