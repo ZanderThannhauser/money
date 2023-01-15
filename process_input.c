@@ -65,19 +65,12 @@ struct out process_input()
 			#ifdef VERBOSE
 			if (verbose)
 			{
-				int sgn = mpz_sgn(value.cents);
-				mpz_t abs, dollar, cents;
-				mpz_init(abs), mpz_init(dollar), mpz_init(cents);
-				mpz_abs(abs, value.cents);
-				mpz_tdiv_qr_ui(dollar, cents, abs, 100);
-				gmp_printf("on line %3u: %s = %s%'Zu.%02Zu\n",
-					assignment->startline, name,
-					sgn < 0 ? "-" : "", dollar, cents);
-				mpz_clear(abs), mpz_clear(dollar), mpz_clear(cents);
+				gmp_printf("on line %3u: %s = %+Qu\n",
+					assignment->startline, name, value.dollar);
 			}
 			#endif
 			
-			mpz_clear(value.cents);
+			mpq_clear(value.dollar);
 		}
 		else if (statement->transaction)
 		{
@@ -85,73 +78,57 @@ struct out process_input()
 			
 			struct tm tm = {};
 			
+			tm.tm_isdst = -1;
+			
 			if (transaction->year)
 			{
-				struct value year = evaluate_postfix(transaction->year, scope);
+				struct value x = evaluate_postfix(transaction->year, scope);
 				
-				mpz_t dollar;
-				
-				mpz_init(dollar);
-				
-				mpz_fdiv_q_ui(dollar, year.cents, 100);
-				
-				if (!mpz_fits_ulong_p(dollar))
+				if (mpz_cmp_ui(mpq_denref(x.dollar), 1))
 				{
 					TODO;
 					exit(1);
 				}
 				
-				tm.tm_year = mpz_get_ui(dollar) - 1900;
+				tm.tm_year = mpz_get_ui(mpq_numref(x.dollar)) - 1900;
 				
 				dpv(tm.tm_year);
 				
-				mpz_clear(dollar), mpz_clear(year.cents);
+				mpq_clear(x.dollar);
 			}
 			
 			if (transaction->month)
 			{
-				struct value month = evaluate_postfix(transaction->month, scope);
+				struct value x = evaluate_postfix(transaction->month, scope);
 				
-				mpz_t dollar;
-				
-				mpz_init(dollar);
-				
-				mpz_fdiv_q_ui(dollar, month.cents, 100);
-				
-				if (!mpz_fits_ulong_p(dollar))
+				if (mpz_cmp_ui(mpq_denref(x.dollar), 1))
 				{
 					TODO;
 					exit(1);
 				}
 				
-				tm.tm_mon = mpz_get_ui(dollar) - 1;
+				tm.tm_mon = mpz_get_ui(mpq_numref(x.dollar)) - 1;
 				
 				dpv(tm.tm_mon);
 				
-				mpz_clear(dollar), mpz_clear(month.cents);
+				mpq_clear(x.dollar);
 			}
 			
 			if (transaction->day)
 			{
-				struct value day = evaluate_postfix(transaction->day, scope);
+				struct value x = evaluate_postfix(transaction->day, scope);
 				
-				mpz_t dollar;
-				
-				mpz_init(dollar);
-				
-				mpz_fdiv_q_ui(dollar, day.cents, 100);
-				
-				if (!mpz_fits_ulong_p(dollar))
+				if (mpz_cmp_ui(mpq_denref(x.dollar), 1))
 				{
 					TODO;
 					exit(1);
 				}
 				
-				tm.tm_mday = mpz_get_ui(dollar);
+				tm.tm_mday = mpz_get_ui(mpq_numref(x.dollar));
 				
 				dpv(tm.tm_mday);
 				
-				mpz_clear(dollar), mpz_clear(day.cents);
+				mpq_clear(x.dollar);
 			}
 			else
 			{
@@ -160,76 +137,54 @@ struct out process_input()
 			
 			if (transaction->hour)
 			{
-				struct value hour = evaluate_postfix(transaction->hour, scope);
+				struct value x = evaluate_postfix(transaction->hour, scope);
 				
-				mpz_t dollar;
-				
-				mpz_init(dollar);
-				
-				mpz_fdiv_q_ui(dollar, hour.cents, 100);
-				
-				if (!mpz_fits_ulong_p(dollar))
+				if (mpz_cmp_ui(mpq_denref(x.dollar), 1))
 				{
 					TODO;
 					exit(1);
 				}
 				
-				tm.tm_hour = mpz_get_ui(dollar);
+				tm.tm_hour = mpz_get_ui(mpq_numref(x.dollar));
 				
 				dpv(tm.tm_hour);
 				
-				mpz_clear(dollar), mpz_clear(hour.cents);
+				mpq_clear(x.dollar);
 			}
 			
 			if (transaction->minute)
 			{
-				struct value minute = evaluate_postfix(transaction->minute, scope);
+				struct value x = evaluate_postfix(transaction->minute, scope);
 				
-				mpz_t dollar;
-				
-				mpz_init(dollar);
-				
-				mpz_fdiv_q_ui(dollar, minute.cents, 100);
-				
-				if (!mpz_fits_ulong_p(dollar))
+				if (mpz_cmp_ui(mpq_denref(x.dollar), 1))
 				{
 					TODO;
 					exit(1);
 				}
 				
-				tm.tm_min = mpz_get_ui(dollar);
+				tm.tm_min = mpz_get_ui(mpq_numref(x.dollar));
 				
 				dpv(tm.tm_min);
 				
-				mpz_clear(dollar), mpz_clear(minute.cents);
+				mpq_clear(x.dollar);
 			}
 			
 			if (transaction->second)
 			{
-				struct value second = evaluate_postfix(transaction->second, scope);
+				struct value x = evaluate_postfix(transaction->second, scope);
 				
-				mpz_t dollar;
-				
-				mpz_init(dollar);
-				
-				mpz_fdiv_q_ui(dollar, second.cents, 100);
-				
-				if (!mpz_fits_ulong_p(dollar))
+				if (mpz_cmp_ui(mpq_denref(x.dollar), 1))
 				{
 					TODO;
 					exit(1);
 				}
 				
-				tm.tm_sec = mpz_get_ui(dollar);
+				tm.tm_sec = mpz_get_ui(mpq_numref(x.dollar));
 				
 				dpv(tm.tm_sec);
 				
-				mpz_clear(dollar), mpz_clear(second.cents);
+				mpq_clear(x.dollar);
 			}
-			
-			struct value delta = evaluate(transaction->delta, scope);
-			
-			tm.tm_isdst = -1;
 			
 			time_t time = mktime(&tm);
 			
@@ -241,14 +196,32 @@ struct out process_input()
 			
 			dpv(time);
 			
+			struct value delta = evaluate(transaction->delta, scope);
+			
+			mpq_t cents;
+			
+			mpq_init(cents);
+			
+			mpq_mul_ui(cents, delta.dollar, 100);
+			
+			// convert cents to mpz. error if not whole amount.
+			TODO;
+			
 			#ifdef VERBOSE
 			if (verbose)
 			{
 				struct tm *tm = localtime(&time);
+				
 				char buffer[300];
-				strftime(
-					buffer, sizeof(buffer), "%Y %b %d %a %I:%M:%S %p", tm);
+				
+				strftime(buffer, sizeof(buffer), "%Y/%m/%d@%H:%M:%S", tm);
+				
+				dpvs(buffer);
+				
+				TODO;
+				#if 0
 				int sgn = mpz_sgn(delta.cents);
+				
 				mpz_t abs, dollar, cents;
 				mpz_init(abs), mpz_init(dollar), mpz_init(cents);
 				mpz_abs(abs, delta.cents);
@@ -257,9 +230,12 @@ struct out process_input()
 					transaction->startline, buffer,
 					sgn < 0 ? "-" : "", dollar, cents);
 				mpz_clear(abs), mpz_clear(dollar), mpz_clear(cents);
+				#endif
 			}
 			#endif
 			
+			TODO;
+			#if 0
 			if (transactions.n == transactions.cap)
 			{
 				transactions.cap = transactions.cap << 1 ?: 1;
@@ -271,6 +247,7 @@ struct out process_input()
 				.time = time,
 				.delta = delta,
 			};
+			#endif
 		}
 		else
 		{
@@ -297,6 +274,8 @@ struct out process_input()
 	}
 	#endif
 	
+	TODO;
+	#if 0
 	qsort(transactions.data, transactions.n, sizeof(*transactions.data), cmp);
 	
 	mpz_t sum;
@@ -399,6 +378,7 @@ struct out process_input()
 	
 	EXIT;
 	return retval;
+	#endif
 }
 
 

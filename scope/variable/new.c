@@ -18,7 +18,9 @@ struct variable* new_variable(
 	
 	this->name = strdup(name);
 	
-	mpz_init_set(this->value.cents, value.cents);
+	mpq_init(this->value.dollar);
+	
+	mpq_set(this->value.dollar, value.dollar);
 	
 	EXIT;
 	return this;

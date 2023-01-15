@@ -31,7 +31,9 @@ struct value scope_lookup(
 	
 	struct variable* variable = node->item;
 	
-	mpz_init_set(retval.cents, variable->value.cents);
+	mpq_init(retval.dollar);
+	
+	mpq_set(retval.dollar, variable->value.dollar);
 	
 	EXIT;
 	return retval;

@@ -27,7 +27,7 @@ void scope_assign(
 	{
 		struct variable* variable = node->item;
 		
-		mpz_set(variable->value.cents, value.cents);
+		mpq_set(variable->value.dollar, value.dollar);
 	}
 	else
 	{

@@ -6,7 +6,7 @@
 
 struct value
 {
-	mpz_t cents;
+	mpq_t dollar;
 };
 
 #endif

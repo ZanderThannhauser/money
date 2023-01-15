@@ -8,6 +8,8 @@
 postfix_expression
 	: `identifier` #identifier
 	| `literal` #literal
+	| "floor" #floor '(' expression #subexpression ')'
+	| "ceil"  #ceil  '(' expression #subexpression ')'
 	| '(' expression #subexpression ')'
 	;
 
@@ -29,15 +31,9 @@ additive_expression
 	| additive_expression #left '-' #minus multiplicative_expression #right
 	;
 
-ternary_expression
-	: additive_expression #inner
-	| additive_expression #conditional '?' #qmark expression #true_case ':' additive_expression #false_case
-	;
+expression: additive_expression #sub;
 
-expression: ternary_expression #sub;
-
-assignment:
-	`identifier` #name '=' expression #expression ';';
+assignment: `identifier` #name '=' expression #expression ';';
 
 transaction:
 	postfix_expression #year

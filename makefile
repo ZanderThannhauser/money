@@ -69,7 +69,7 @@ default: $(buildprefix)/money
 
 ARGS += -v
 
-#ARGS += -p
+ARGS += -p
 
 ARGS += -i ./examples/test.money
 

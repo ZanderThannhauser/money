@@ -39,7 +39,7 @@ struct zebu_assignment
 
 struct zebu_expression
 {
-	struct zebu_ternary_expression* sub;
+	struct zebu_additive_expression* sub;
 	unsigned refcount, startline, endline;
 };
 
@@ -55,6 +55,8 @@ struct zebu_multiplicative_expression
 
 struct zebu_postfix_expression
 {
+	struct zebu_token* ceil;
+	struct zebu_token* floor;
 	struct zebu_token* identifier;
 	struct zebu_token* literal;
 	struct zebu_expression* subexpression;
@@ -74,16 +76,6 @@ struct zebu_statement
 {
 	struct zebu_assignment* assignment;
 	struct zebu_transaction* transaction;
-	unsigned refcount, startline, endline;
-};
-
-struct zebu_ternary_expression
-{
-	struct zebu_additive_expression* conditional;
-	struct zebu_additive_expression* false_case;
-	struct zebu_additive_expression* inner;
-	struct zebu_token* qmark;
-	struct zebu_expression* true_case;
 	unsigned refcount, startline, endline;
 };
 
@@ -110,7 +102,6 @@ extern struct zebu_multiplicative_expression* inc_zebu_multiplicative_expression
 extern struct zebu_postfix_expression* inc_zebu_postfix_expression(struct zebu_postfix_expression* ptree);
 extern struct zebu_prefix_expression* inc_zebu_prefix_expression(struct zebu_prefix_expression* ptree);
 extern struct zebu_statement* inc_zebu_statement(struct zebu_statement* ptree);
-extern struct zebu_ternary_expression* inc_zebu_ternary_expression(struct zebu_ternary_expression* ptree);
 extern struct zebu_transaction* inc_zebu_transaction(struct zebu_transaction* ptree);
 
 
@@ -130,8 +121,6 @@ extern void free_zebu_postfix_expression(struct zebu_postfix_expression* ptree);
 extern void free_zebu_prefix_expression(struct zebu_prefix_expression* ptree);
 
 extern void free_zebu_statement(struct zebu_statement* ptree);
-
-extern void free_zebu_ternary_expression(struct zebu_ternary_expression* ptree);
 
 extern void free_zebu_transaction(struct zebu_transaction* ptree);
 

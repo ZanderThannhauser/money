@@ -15,9 +15,12 @@ void free_variable(
 	
 	free(this->name);
 	
+	TODO;
+	#if 0
 	mpz_clear(this->value.cents);
 	
 	free(this);
+	#endif
 	
 	EXIT;
 }
