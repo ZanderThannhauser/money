@@ -198,15 +198,6 @@ struct out process_input()
 			
 			struct value delta = evaluate(transaction->delta, scope);
 			
-			mpq_t cents;
-			
-			mpq_init(cents);
-			
-			mpq_mul_ui(cents, delta.dollar, 100);
-			
-			// convert cents to mpz. error if not whole amount.
-			TODO;
-			
 			#ifdef VERBOSE
 			if (verbose)
 			{
@@ -216,26 +207,11 @@ struct out process_input()
 				
 				strftime(buffer, sizeof(buffer), "%Y/%m/%d@%H:%M:%S", tm);
 				
-				dpvs(buffer);
-				
-				TODO;
-				#if 0
-				int sgn = mpz_sgn(delta.cents);
-				
-				mpz_t abs, dollar, cents;
-				mpz_init(abs), mpz_init(dollar), mpz_init(cents);
-				mpz_abs(abs, delta.cents);
-				mpz_tdiv_qr_ui(dollar, cents, abs, 100);
-				gmp_printf("on line %3u: at %s: %s$%'Zu.%02Zu\n",
-					transaction->startline, buffer,
-					sgn < 0 ? "-" : "", dollar, cents);
-				mpz_clear(abs), mpz_clear(dollar), mpz_clear(cents);
-				#endif
+				gmp_printf("on line %3u: at %s: $%'Qu\n",
+					transaction->startline, buffer, delta.dollar);
 			}
 			#endif
 			
-			TODO;
-			#if 0
 			if (transactions.n == transactions.cap)
 			{
 				transactions.cap = transactions.cap << 1 ?: 1;
@@ -247,7 +223,6 @@ struct out process_input()
 				.time = time,
 				.delta = delta,
 			};
-			#endif
 		}
 		else
 		{
@@ -274,13 +249,11 @@ struct out process_input()
 	}
 	#endif
 	
-	TODO;
-	#if 0
 	qsort(transactions.data, transactions.n, sizeof(*transactions.data), cmp);
 	
-	mpz_t sum;
+	mpq_t sum;
 	
-	mpz_init_set_ui(sum, 0);
+	mpq_init(sum);
 	
 	struct out retval;
 	retval.n = 2 * (transactions.n);
@@ -292,6 +265,12 @@ struct out process_input()
 	
 	time(&now);
 	
+	mpq_t hundred;
+	
+	mpq_init(hundred);
+	
+	mpq_set_ui(hundred, 100, 1);
+	
 	unsigned i, n;
 	for (i = 0, n = transactions.n; i < n; i++)
 	{
@@ -299,7 +278,7 @@ struct out process_input()
 		
 		{
 			retval.points[I].x = transaction->time - now;
-			retval.points[I].y = mpz_get_d(sum);
+			retval.points[I].y = mpq_get_d(sum);
 			I++;
 		}
 		
@@ -309,76 +288,89 @@ struct out process_input()
 			
 			char buffer[300];
 			
-			strftime(buffer, sizeof(buffer), "%Y %b %d %a %I:%M:%S %p", tm);
+			strftime(buffer, sizeof(buffer), "%Y/%m/%d@%H:%M:%S", tm);
 			
-			int sgn = mpz_sgn(transaction->delta.cents);
-
-			mpz_t abs, dollar, cents;
-
-			mpz_init(abs), mpz_init(dollar), mpz_init(cents);
-
-			mpz_abs(abs, transaction->delta.cents);
-
-			mpz_tdiv_qr_ui(dollar, cents, abs, 100);
-
+			int sgn = mpq_sgn(transaction->delta.dollar);
+			
+			mpq_t tmp;
+			
+			mpq_init(tmp);
+			
+			mpq_abs(tmp, transaction->delta.dollar);
+			
+			mpq_mul(tmp, tmp, hundred);
+			
+			mpz_t dollar, cents;
+			
+			mpz_init(dollar), mpz_init(cents);
+			
+			mpz_fdiv_q(cents, mpq_numref(tmp), mpq_denref(tmp));
+			
+			mpz_fdiv_qr_ui(dollar, cents, cents, 100);
+			
 			gmp_printf("%s: %c$%'5Zu.%02Zu\n", buffer, sgn < 0 ? '-' : '+', dollar, cents);
 			
-			mpz_clear(abs), mpz_clear(dollar), mpz_clear(cents);
+			mpq_clear(tmp), mpz_clear(dollar), mpz_clear(cents);
 		}
 		
-		mpz_add(sum, sum, transaction->delta.cents);
+		mpq_add(sum, sum, transaction->delta.dollar);
 		
 		// print new sum:
 		{
-			int sgn = mpz_sgn(sum);
+			int sgn = mpq_sgn(sum);
 			
-			mpz_t abs, dollar, cents;
+			mpq_t tmp;
 			
-			mpz_init(abs), mpz_init(dollar), mpz_init(cents);
+			mpq_init(tmp);
 			
-			mpz_abs(abs, sum);
+			mpq_abs(tmp, sum);
 			
-			mpz_tdiv_qr_ui(dollar, cents, abs, 100);
+			mpq_mul(tmp, tmp, hundred);
+			
+			mpz_t dollar, cents;
+			
+			mpz_init(dollar), mpz_init(cents);
+			
+			mpz_fdiv_q(cents, mpq_numref(tmp), mpq_denref(tmp));
+			
+			mpz_fdiv_qr_ui(dollar, cents, cents, 100);
 			
 			if (sgn < 0)
-			{
 				gmp_printf("%40s\e[31m($%'5Zu.%02Zu)\e[0m\n", "", dollar, cents);
-			}
 			else if (!sgn)
-			{
 				gmp_printf("%40s \e[33m$%'5Zu.%02Zu\e[0m\n", "", dollar, cents);
-			}
 			else
-			{
 				gmp_printf("%40s \e[32m$%'5Zu.%02Zu\e[0m\n", "", dollar, cents);
-			}
 			
-			mpz_clear(abs), mpz_clear(dollar), mpz_clear(cents);
+			mpq_clear(tmp), mpz_clear(dollar), mpz_clear(cents);
 		}
 		
 		{
 			retval.points[I].x = transaction->time - now;
-			retval.points[I].y = mpz_get_d(sum);
+			retval.points[I].y = mpq_get_d(sum);
 			I++;
 		}
 	}
 	
 	while (transactions.n--)
-		mpz_clear(transactions.data[transactions.n].delta.cents);
+	{
+		mpq_clear(transactions.data[transactions.n].delta.dollar);
+	}
 	
 	free_zebu_$start(start);
 	
 	free(transactions.data);
 	
+	mpq_clear(hundred);
+	
 	free_scope(scope);
 	
-	mpz_clear(sum);
+	mpq_clear(sum);
 	
 	fclose(stream);
 	
 	EXIT;
 	return retval;
-	#endif
 }
 
 

@@ -55,8 +55,6 @@ struct zebu_multiplicative_expression
 
 struct zebu_postfix_expression
 {
-	struct zebu_token* ceil;
-	struct zebu_token* floor;
 	struct zebu_token* identifier;
 	struct zebu_token* literal;
 	struct zebu_expression* subexpression;

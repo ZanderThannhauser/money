@@ -22,32 +22,38 @@ static struct value evaluate_literal(
 	
 	if (dot)
 	{
-		TODO;
-		#if 0
 		*dot = 0;
-		
-		mpq_t dollar, dollar;
-		
-		mpq_init_set_str(dollar, (char*) token->data, 10);
-		
-		mpq_init_set_str(dollar, (char*) dot + 1, 10);
 		
 		mpq_init(retval.dollar);
 		
-		mpq_mul_ui(retval.dollar, dollar, 100);
+		mpq_set_str(retval.dollar, (char*) token->data, 10);
 		
-		mpq_add(retval.dollar, retval.dollar, dollar);
+		mpq_t decimal, ten;
 		
-		mpq_clear(dollar), mpq_clear(dollar);
-		#endif
+		mpq_init(decimal);
+		mpq_init(ten);
+		
+		mpq_set_ui(decimal, 1, 10);
+		mpq_set_ui(ten, 10, 1);
+		
+		for (unsigned char* m = dot + 1; *m; m++)
+		{
+			dpvc(*m);
+			
+			for (unsigned char x = *m; x > '0'; x--)
+				mpq_add(retval.dollar, retval.dollar, decimal);
+			
+			mpq_div(decimal, decimal, ten);
+		}
+		
+		mpq_clear(decimal);
+		mpq_clear(ten);
 	}
 	else
 	{
 		mpq_init(retval.dollar);
 		
 		mpq_set_str(retval.dollar, (char*) token->data, 10);
-		
-/*		mpq_mul_ui(retval.dollar, retval.dollar, 100);*/
 	}
 	
 	EXIT;
@@ -68,42 +74,6 @@ struct value evaluate_postfix(
 	else if (postfix->identifier)
 	{
 		retval = scope_lookup(scope, (const char*) postfix->identifier->data);
-	}
-	else if (postfix->floor)
-	{
-		struct value inner = evaluate(postfix->subexpression, scope);
-		
-		mpz_t floor;
-		
-		mpz_init(floor);
-		
-		mpz_fdiv_q(floor, mpq_numref(inner.dollar), mpq_denref(inner.dollar));
-		
-		mpq_init(retval.dollar);
-		
-		mpq_set_z(retval.dollar, floor);
-		
-		mpq_clear(inner.dollar);
-		
-		mpz_clear(floor);
-	}
-	else if (postfix->ceil)
-	{
-		struct value inner = evaluate(postfix->subexpression, scope);
-		
-		mpz_t ceil;
-		
-		mpz_init(ceil);
-		
-		mpz_cdiv_q(ceil, mpq_numref(inner.dollar), mpq_denref(inner.dollar));
-		
-		mpq_init(retval.dollar);
-		
-		mpq_set_z(retval.dollar, ceil);
-		
-		mpq_clear(inner.dollar);
-		
-		mpz_clear(ceil);
 	}
 	else if (postfix->subexpression)
 	{
@@ -163,8 +133,6 @@ static struct value evaluate_multiplicative(
 	}
 	else if (additive->times)
 	{
-		TODO;
-		#if 0
 		struct value left = evaluate_multiplicative(additive->left, scope);
 		
 		struct value right = evaluate_prefix(additive->right, scope);
@@ -173,10 +141,7 @@ static struct value evaluate_multiplicative(
 		
 		mpq_mul(retval.dollar, left.dollar, right.dollar);
 		
-		mpq_fdiv_q_ui(retval.dollar, retval.dollar, 100);
-		
 		mpq_clear(left.dollar), mpq_clear(right.dollar);
-		#endif
 	}
 	else if (additive->divide)
 	{
@@ -213,8 +178,6 @@ static struct value evaluate_additive(
 	}
 	else if (additive->plus)
 	{
-		TODO;
-		#if 0
 		struct value left = evaluate_additive(additive->left, scope);
 		
 		struct value right = evaluate_multiplicative(additive->right, scope);
@@ -224,12 +187,9 @@ static struct value evaluate_additive(
 		mpq_add(retval.dollar, left.dollar, right.dollar);
 		
 		mpq_clear(left.dollar), mpq_clear(right.dollar);
-		#endif
 	}
 	else if (additive->minus)
 	{
-		TODO;
-		#if 0
 		struct value left = evaluate_additive(additive->left, scope);
 		
 		struct value right = evaluate_multiplicative(additive->right, scope);
@@ -239,7 +199,6 @@ static struct value evaluate_additive(
 		mpq_sub(retval.dollar, left.dollar, right.dollar);
 		
 		mpq_clear(left.dollar), mpq_clear(right.dollar);
-		#endif
 	}
 	else
 	{
