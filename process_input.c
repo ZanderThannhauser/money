@@ -20,6 +20,43 @@
 
 #include "process_input.h"
 
+static void print_fraction(mpq_t x)
+{
+	putchar(' ');
+	
+	{
+		char* num = NULL;
+		
+		gmp_asprintf(&num, "%Zu", mpq_numref(x));
+		
+		static const char* lookup[] = {
+			"⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹",
+		};
+		
+		for (char* i = num; *i; i++)
+			fputs(lookup[*i - '0'], stdout);
+		
+		free(num);
+	}
+	
+	putchar('/');
+	
+	{
+		char* den = NULL;
+		
+		gmp_asprintf(&den, "%Zu", mpq_denref(x));
+		
+		static const char* lookup[] = {
+			"₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉"
+		};
+		
+		for (char* i = den; *i; i++)
+			fputs(lookup[*i - '0'], stdout);
+		
+		free(den);
+	}
+}
+
 struct out process_input()
 {
 	ENTER;
@@ -207,7 +244,7 @@ struct out process_input()
 				
 				strftime(buffer, sizeof(buffer), "%Y/%m/%d@%H:%M:%S", tm);
 				
-				gmp_printf("on line %3u: at %s: $%'Qu\n",
+				gmp_printf("on line %3u: at %s: %'Qu\n",
 					transaction->startline, buffer, delta.dollar);
 			}
 			#endif
@@ -284,11 +321,15 @@ struct out process_input()
 		
 		// print transaction:
 		{
-			struct tm *tm = localtime(&transaction->time);
-			
-			char buffer[300];
-			
-			strftime(buffer, sizeof(buffer), "%Y/%m/%d@%H:%M:%S", tm);
+			{
+				struct tm *tm = localtime(&transaction->time);
+				
+				char buffer[300];
+				
+				strftime(buffer, sizeof(buffer), "%Y/%m/%d@%H:%M:%S", tm);
+				
+				printf("%s: ", buffer);
+			}
 			
 			int sgn = mpq_sgn(transaction->delta.dollar);
 			
@@ -300,17 +341,30 @@ struct out process_input()
 			
 			mpq_mul(tmp, tmp, hundred);
 			
-			mpz_t dollar, cents;
+			{
+				mpz_t dollar, cents;
+				
+				mpz_init(dollar), mpz_init(cents);
+				
+				mpz_fdiv_q(cents, mpq_numref(tmp), mpq_denref(tmp));
+				
+				mpz_fdiv_qr_ui(dollar, cents, cents, 100);
+				
+				gmp_printf("%c$%'5Zu.%02Zu", sgn < 0 ? '-' : '+', dollar, cents);
+				
+				mpz_clear(dollar), mpz_clear(cents);
+			}
 			
-			mpz_init(dollar), mpz_init(cents);
+			mpz_fdiv_r(mpq_numref(tmp), mpq_numref(tmp), mpq_denref(tmp));
 			
-			mpz_fdiv_q(cents, mpq_numref(tmp), mpq_denref(tmp));
+			if (mpq_sgn(tmp))
+			{
+				print_fraction(tmp);
+			}
 			
-			mpz_fdiv_qr_ui(dollar, cents, cents, 100);
+			puts("");
 			
-			gmp_printf("%s: %c$%'5Zu.%02Zu\n", buffer, sgn < 0 ? '-' : '+', dollar, cents);
-			
-			mpq_clear(tmp), mpz_clear(dollar), mpz_clear(cents);
+			mpq_clear(tmp);
 		}
 		
 		mpq_add(sum, sum, transaction->delta.dollar);
@@ -327,22 +381,39 @@ struct out process_input()
 			
 			mpq_mul(tmp, tmp, hundred);
 			
-			mpz_t dollar, cents;
-			
-			mpz_init(dollar), mpz_init(cents);
-			
-			mpz_fdiv_q(cents, mpq_numref(tmp), mpq_denref(tmp));
-			
-			mpz_fdiv_qr_ui(dollar, cents, cents, 100);
+			printf("%40s", "");
 			
 			if (sgn < 0)
-				gmp_printf("%40s\e[31m($%'5Zu.%02Zu)\e[0m\n", "", dollar, cents);
-			else if (!sgn)
-				gmp_printf("%40s \e[33m$%'5Zu.%02Zu\e[0m\n", "", dollar, cents);
+				printf("\e[31m");
+			else if (mpq_cmp_ui(sum, 1000, 1) < 0)
+				printf("\e[33m");
 			else
-				gmp_printf("%40s \e[32m$%'5Zu.%02Zu\e[0m\n", "", dollar, cents);
+				printf("\e[32m");
 			
-			mpq_clear(tmp), mpz_clear(dollar), mpz_clear(cents);
+			{
+				mpz_t dollar, cents;
+			
+				mpz_init(dollar), mpz_init(cents);
+				
+				mpz_fdiv_q(cents, mpq_numref(tmp), mpq_denref(tmp));
+				
+				mpz_fdiv_qr_ui(dollar, cents, cents, 100);
+				
+				gmp_printf("%c$%'5Zu.%02Zu", sgn < 0 ? '-' : '+', dollar, cents);
+				
+				mpz_clear(dollar), mpz_clear(cents);
+			}
+			
+			mpz_fdiv_r(mpq_numref(tmp), mpq_numref(tmp), mpq_denref(tmp));
+			
+			if (mpq_sgn(tmp))
+			{
+				print_fraction(tmp);
+			}
+			
+			puts("\e[0m");
+			
+			mpq_clear(tmp);
 		}
 		
 		{
