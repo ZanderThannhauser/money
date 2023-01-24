@@ -1,4 +1,5 @@
 
+#include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
@@ -180,8 +181,8 @@ int main(int argc, char* const* argv)
 				
 				for (unsigned i = 0; i < plotme.n; i++)
 				{
-					points[i].x = plotme.points[i].x / (60 * 60 * 24);
-					points[i].y = plotme.points[i].y / 100;
+					points[i].x = plotme.points[i].x; // / (60 * 60 * 24);
+					points[i].y = plotme.points[i].y; // / 100;
 					
 					if (plotme.points[i].y < 0)
 					{
@@ -233,6 +234,10 @@ int main(int argc, char* const* argv)
 		
 		struct mat4 projection = mat4_identity();
 		
+		time_t now;
+		
+		time(&now);
+		
 		struct mat4 view = mat4_identity();
 		
 		void update_mvp()
@@ -275,48 +280,185 @@ int main(int argc, char* const* argv)
 				struct {
 					float x, y, r, g, b;
 				} to, from;
-			} points[30] = {};
+			} points[400] = {};
 			
-			for (double   incx = pow(5, round(log(maxx - minx) / log(5)) - 1),
-				        startx  = minx - remainder(minx, incx),
-				          endx  = maxx - remainder(maxx, incx);
-				        startx <= endx;
-				        startx += incx)
+			static char newtitle[300], title[300];
+			
+			// horizontal gridlines:
 			{
-				points[i].to.x = startx;
-				points[i].to.y = maxy;
-				points[i].to.r = 0.1;
-				points[i].to.g = 0.1;
-				points[i].to.b = 0.1;
+				time_t mint = floor(minx) + now;
+				struct tm mintm = *localtime(&mint);
 				
-				points[i].from.x = startx;
-				points[i].from.y = miny;
-				points[i].from.r = 0.1;
-				points[i].from.g = 0.1;
-				points[i].from.b = 0.1;
-				i++;
+				time_t maxt = ceil(maxx) + now;
+				struct tm maxtm = *localtime(&maxt);
+				
+				double span = maxx - minx;
+				
+				if (span < 1)
+				{
+					TODO;
+				}
+				
+				// seconds (2 minutes)
+				if (span < 2 * 60)
+				{
+					for (double startx  = minx - remainder(minx, 1),
+								  endx  = maxx - remainder(maxx, 1);
+								startx <= endx;
+								startx += 1)
+					{
+						points[i].to.x = startx;
+						points[i].to.y = maxy;
+						points[i].to.r = 0.4;
+						points[i].to.g = 0.1;
+						points[i].to.b = 0.1;
+						
+						points[i].from.x = startx;
+						points[i].from.y = miny;
+						points[i].from.r = 0.4;
+						points[i].from.g = 0.1;
+						points[i].from.b = 0.1;
+						i++;
+					}
+				}
+				
+				// minutes (2 hours)
+				if (span < 2 * 60 * 60)
+				{
+					for (double startx  = minx - remainder(minx, 60),
+								  endx  = maxx - remainder(maxx, 60);
+								startx <= endx;
+								startx += 60)
+					{
+						points[i].to.x = startx;
+						points[i].to.y = maxy;
+						points[i].to.r = 0.5;
+						points[i].to.g = 0.5;
+						points[i].to.b = 0.1;
+						
+						points[i].from.x = startx;
+						points[i].from.y = miny;
+						points[i].from.r = 0.5;
+						points[i].from.g = 0.5;
+						points[i].from.b = 0.1;
+						i++;
+					}
+				}
+				
+				// hours (3 days)
+				if (span < 3 * 24 * 60 * 60)
+				{
+					for (double startx  = minx - remainder(minx, 60 * 60),
+								  endx  = maxx - remainder(maxx, 60 * 60);
+								startx <= endx;
+								startx += 60 * 60)
+					{
+						points[i].to.x = startx;
+						points[i].to.y = maxy;
+						points[i].to.r = 0.1;
+						points[i].to.g = 0.5;
+						points[i].to.b = 0.1;
+						
+						points[i].from.x = startx;
+						points[i].from.y = miny;
+						points[i].from.r = 0.1;
+						points[i].from.g = 0.5;
+						points[i].from.b = 0.1;
+						i++;
+					}
+				}
+				
+				// days (1 year)
+/*				if (span < 365 * 24 * 60 * 60)*/
+				{
+					struct tm tm = mintm;
+					tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
+					
+					while (i < 400 && (false
+						|| tm.tm_mday <= maxtm.tm_mday
+						|| tm.tm_mon  < maxtm.tm_mon
+						|| tm.tm_year < maxtm.tm_year))
+					{
+						time_t moving = mktime(&tm);
+						
+						points[i].to.x = moving - now;
+						points[i].to.y = maxy;
+						points[i].to.r = 0.1;
+						points[i].to.g = 0.5;
+						points[i].to.b = 0.5;
+						
+						points[i].from.x = moving - now;
+						points[i].from.y = miny;
+						points[i].from.r = 0.1;
+						points[i].from.g = 0.5;
+						points[i].from.b = 0.5;
+						i++, tm.tm_mday++;
+					}
+				}
+				
+				// weeks (1 year)
+/*				if (span < 365 * 24 * 60 * 60)*/
+				{
+					struct tm tm = mintm;
+					tm.tm_mday = 0, tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
+					
+					do tm.tm_mday++, mktime(&tm); while (tm.tm_wday != 0);
+					
+					tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
+					
+					while (i < 400 && (false
+						|| tm.tm_mon  <= maxtm.tm_mon
+						|| tm.tm_year <  maxtm.tm_year))
+					{
+						time_t moving = mktime(&tm);
+						
+						points[i].to.x = moving - now;
+						points[i].to.y = maxy;
+						points[i].to.r = 0.1;
+						points[i].to.g = 0.1;
+						points[i].to.b = 0.5;
+						
+						points[i].from.x = moving - now;
+						points[i].from.y = miny;
+						points[i].from.r = 0.1;
+						points[i].from.g = 0.1;
+						points[i].from.b = 0.5;
+						i++, tm.tm_mday += 7;
+					}
+				}
+				
+				// months (3 years)
+/*				if (span < 3 * 365 * 24 * 60 * 60)*/
+				{
+					struct tm tm = mintm;
+					tm.tm_mon = 0;
+					
+					while (i < 400 && (false
+						|| tm.tm_mon < 12
+						|| tm.tm_year < maxtm.tm_year))
+					{
+						tm.tm_mday = 1, tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
+						
+						time_t moving = mktime(&tm);
+						
+						points[i].to.x = moving - now;
+						points[i].to.y = maxy;
+						points[i].to.r = 0.5;
+						points[i].to.g = 0.1;
+						points[i].to.b = 0.5;
+						
+						points[i].from.x = moving - now;
+						points[i].from.y = miny;
+						points[i].from.r = 0.5;
+						points[i].from.g = 0.1;
+						points[i].from.b = 0.5;
+						i++, tm.tm_mon++;
+					}
+				}
 			}
 			
-			for (double   incy = pow(5, round(log(maxy - miny) / log(5)) - 1),
-				        starty  = miny - remainder(miny, incy),
-				          endy  = maxy - remainder(maxy, incy);
-				        starty <= endy;
-				        starty += incy)
-			{
-				points[i].to.x = maxx;
-				points[i].to.y = starty;
-				points[i].to.r = 0.1;
-				points[i].to.g = 0.1;
-				points[i].to.b = 0.1;
-				
-				points[i].from.x = minx;
-				points[i].from.y = starty;
-				points[i].from.r = 0.1;
-				points[i].from.g = 0.1;
-				points[i].from.b = 0.1;
-				i++;
-			}
-			
+			// horizontal axis:
+			if (i < 400)
 			{
 				points[i].to.x = maxx;
 				points[i].to.y = 0;
@@ -332,6 +474,10 @@ int main(int argc, char* const* argv)
 				i++;
 			}
 			
+			assert(i <= 400);
+			
+			#if 0
+			// vertical axis:
 			{
 				points[i].to.x = 0;
 				points[i].to.y = maxy;
@@ -346,8 +492,7 @@ int main(int argc, char* const* argv)
 				points[i].from.b = 0.75;
 				i++;
 			}
-			
-			assert(i <= sizeof(points) / sizeof(*points));
+			#endif
 			
 			glNamedBufferData(grid.buffer, sizeof(points), points, GL_DYNAMIC_DRAW);
 		}
@@ -432,7 +577,7 @@ int main(int argc, char* const* argv)
 			was.left_pressed = left_pressed;
 			was.right_pressed = right_pressed;
 		}
-
+		
 		glfwSetCursorPosCallback(window, cursor_position_callback);
 		
 		void scroll_callback(
@@ -471,20 +616,12 @@ int main(int argc, char* const* argv)
 			
 			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 			{
-				#define F (0.05)
-				
 				view = mat4_identity();
-	/*			view = mat4_add(view,*/
-	/*				mat4_multiply(*/
-	/*					mat4_scale(F, F, F, F),*/
-	/*					mat4_subtract(mat4_identity(), view)));*/
-				
 				update_mvp();
-				
 				update_grid();
 			}
 			
-			glClearColor(0.65f, 0.7f, 0.7f, 1.0f);
+			glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 			
 			glClear(GL_COLOR_BUFFER_BIT);
 			
@@ -493,7 +630,7 @@ int main(int argc, char* const* argv)
 			glLineWidth(2);
 			glBindVertexArray(grid.vertex_array);
 			{
-				glDrawArrays(GL_LINES, 0, 2 * 30);
+				glDrawArrays(GL_LINES, 0, 2 * 400);
 			}
 			glBindVertexArray(0);
 			

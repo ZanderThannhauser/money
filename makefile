@@ -69,10 +69,10 @@ default: $(buildprefix)/money
 
 ARGS += -v
 
-ARGS += -p
+#ARGS += -p
 
-#ARGS += -i ./examples/test.money
-ARGS += -i ~/money/arbor-checking.money
+ARGS += -i ./examples/test.money
+#ARGS += -i ~/money/arbor-checking.money
 
 run: $(buildprefix)/money
 	$< $(ARGS)
