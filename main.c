@@ -181,8 +181,8 @@ int main(int argc, char* const* argv)
 				
 				for (unsigned i = 0; i < plotme.n; i++)
 				{
-					points[i].x = plotme.points[i].x; // / (60 * 60 * 24);
-					points[i].y = plotme.points[i].y; // / 100;
+					points[i].x = plotme.points[i].x;
+					points[i].y = plotme.points[i].y;
 					
 					if (plotme.points[i].y < 0)
 					{
@@ -234,9 +234,7 @@ int main(int argc, char* const* argv)
 		
 		struct mat4 projection = mat4_identity();
 		
-		time_t now;
-		
-		time(&now);
+		time_t initial = time(NULL), now = initial;
 		
 		struct mat4 view = mat4_identity();
 		
@@ -251,6 +249,14 @@ int main(int argc, char* const* argv)
 			glUseProgram(0);
 		}
 		
+		struct {
+			struct {
+				float x, y, r, g, b;
+			} to, from;
+		} points[801] = {};
+		
+		float minx, maxx, miny, maxy;
+		
 		void update_grid()
 		{
 			struct mat4 mvp = mat4_multiply(projection, view);
@@ -262,13 +268,13 @@ int main(int argc, char* const* argv)
 			struct vec4 br = mat4_multiply_with_vec4(inverse, vec4(-1,  1, 0, 1));
 			struct vec4 bl = mat4_multiply_with_vec4(inverse, vec4(-1, -1, 0, 1));
 			
-			float minx = tr.x, maxx = tr.x;
+			minx = tr.x, maxx = tr.x;
 			
 			if (tl.x < minx) { minx = tl.x; } if (tl.x > maxx) { maxx = tl.x; }
 			if (br.x < minx) { minx = br.x; } if (br.x > maxx) { maxx = br.x; }
 			if (bl.x < minx) { minx = bl.x; } if (bl.x > maxx) { maxx = bl.x; }
 			
-			float miny = tr.y, maxy = tr.y;
+			miny = tr.y, maxy = tr.y;
 			
 			if (tl.y < miny) { miny = tl.y; } if (tl.y > maxy) { maxy = tl.y; }
 			if (br.y < miny) { miny = br.y; } if (br.y > maxy) { maxy = br.y; }
@@ -276,28 +282,15 @@ int main(int argc, char* const* argv)
 			
 			unsigned i = 0;
 			
-			struct {
-				struct {
-					float x, y, r, g, b;
-				} to, from;
-			} points[400] = {};
-			
-			static char newtitle[300], title[300];
-			
 			// horizontal gridlines:
 			{
-				time_t mint = floor(minx) + now;
+				time_t mint = floor(minx) + initial;
 				struct tm mintm = *localtime(&mint);
 				
-				time_t maxt = ceil(maxx) + now;
+				time_t maxt = ceil(maxx) + initial;
 				struct tm maxtm = *localtime(&maxt);
 				
 				double span = maxx - minx;
-				
-				if (span < 1)
-				{
-					TODO;
-				}
 				
 				// seconds (2 minutes)
 				if (span < 2 * 60)
@@ -309,13 +302,13 @@ int main(int argc, char* const* argv)
 					{
 						points[i].to.x = startx;
 						points[i].to.y = maxy;
-						points[i].to.r = 0.4;
+						points[i].to.r = 0.6;
 						points[i].to.g = 0.1;
 						points[i].to.b = 0.1;
 						
 						points[i].from.x = startx;
 						points[i].from.y = miny;
-						points[i].from.r = 0.4;
+						points[i].from.r = 0.6;
 						points[i].from.g = 0.1;
 						points[i].from.b = 0.1;
 						i++;
@@ -325,79 +318,92 @@ int main(int argc, char* const* argv)
 				// minutes (2 hours)
 				if (span < 2 * 60 * 60)
 				{
-					for (double startx  = minx - remainder(minx, 60),
-								  endx  = maxx - remainder(maxx, 60);
-								startx <= endx;
-								startx += 60)
+					struct tm tm = mintm;
+					tm.tm_sec = 0;
+					
+					while (i < 800 && (false
+						|| tm.tm_min  <= maxtm.tm_min
+						|| tm.tm_hour <  maxtm.tm_hour
+						|| tm.tm_mday <  maxtm.tm_mday
+						|| tm.tm_mon  <  maxtm.tm_mon
+						|| tm.tm_year <  maxtm.tm_year))
 					{
-						points[i].to.x = startx;
+						time_t moving = mktime(&tm);
+						
+						points[i].to.x = moving - initial;
 						points[i].to.y = maxy;
-						points[i].to.r = 0.5;
-						points[i].to.g = 0.5;
+						points[i].to.r = 0.6;
+						points[i].to.g = 0.6;
 						points[i].to.b = 0.1;
 						
-						points[i].from.x = startx;
+						points[i].from.x = moving - initial;
 						points[i].from.y = miny;
-						points[i].from.r = 0.5;
-						points[i].from.g = 0.5;
+						points[i].from.r = 0.6;
+						points[i].from.g = 0.6;
 						points[i].from.b = 0.1;
-						i++;
+						i++, tm.tm_min++;
 					}
 				}
 				
 				// hours (3 days)
 				if (span < 3 * 24 * 60 * 60)
 				{
-					for (double startx  = minx - remainder(minx, 60 * 60),
-								  endx  = maxx - remainder(maxx, 60 * 60);
-								startx <= endx;
-								startx += 60 * 60)
+					struct tm tm = mintm;
+					tm.tm_min = 0, tm.tm_sec = 0;
+					
+					while (i < 800 && (false
+						|| tm.tm_hour <= maxtm.tm_hour
+						|| tm.tm_mday <  maxtm.tm_mday
+						|| tm.tm_mon  <  maxtm.tm_mon
+						|| tm.tm_year <  maxtm.tm_year))
 					{
-						points[i].to.x = startx;
+						time_t moving = mktime(&tm);
+						
+						points[i].to.x = moving - initial;
 						points[i].to.y = maxy;
 						points[i].to.r = 0.1;
-						points[i].to.g = 0.5;
+						points[i].to.g = 0.6;
 						points[i].to.b = 0.1;
 						
-						points[i].from.x = startx;
+						points[i].from.x = moving - initial;
 						points[i].from.y = miny;
 						points[i].from.r = 0.1;
-						points[i].from.g = 0.5;
+						points[i].from.g = 0.6;
 						points[i].from.b = 0.1;
-						i++;
+						i++, tm.tm_hour++;
 					}
 				}
 				
-				// days (1 year)
-/*				if (span < 365 * 24 * 60 * 60)*/
+				// days (3 years)
+				if (span < 3 * 365 * 24 * 60 * 60)
 				{
 					struct tm tm = mintm;
 					tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
 					
-					while (i < 400 && (false
+					while (i < 800 && (false
 						|| tm.tm_mday <= maxtm.tm_mday
 						|| tm.tm_mon  < maxtm.tm_mon
 						|| tm.tm_year < maxtm.tm_year))
 					{
 						time_t moving = mktime(&tm);
 						
-						points[i].to.x = moving - now;
+						points[i].to.x = moving - initial;
 						points[i].to.y = maxy;
 						points[i].to.r = 0.1;
-						points[i].to.g = 0.5;
-						points[i].to.b = 0.5;
+						points[i].to.g = 0.6;
+						points[i].to.b = 0.6;
 						
-						points[i].from.x = moving - now;
+						points[i].from.x = moving - initial;
 						points[i].from.y = miny;
 						points[i].from.r = 0.1;
-						points[i].from.g = 0.5;
-						points[i].from.b = 0.5;
+						points[i].from.g = 0.6;
+						points[i].from.b = 0.6;
 						i++, tm.tm_mday++;
 					}
 				}
 				
-				// weeks (1 year)
-/*				if (span < 365 * 24 * 60 * 60)*/
+				// weeks (3 years)
+				if (span < 3 * 365 * 24 * 60 * 60)
 				{
 					struct tm tm = mintm;
 					tm.tm_mday = 0, tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
@@ -406,34 +412,34 @@ int main(int argc, char* const* argv)
 					
 					tm.tm_hour = 0, tm.tm_min = 0, tm.tm_sec = 0;
 					
-					while (i < 400 && (false
+					while (i < 800 && (false
 						|| tm.tm_mon  <= maxtm.tm_mon
 						|| tm.tm_year <  maxtm.tm_year))
 					{
 						time_t moving = mktime(&tm);
 						
-						points[i].to.x = moving - now;
+						points[i].to.x = moving - initial;
 						points[i].to.y = maxy;
 						points[i].to.r = 0.1;
 						points[i].to.g = 0.1;
-						points[i].to.b = 0.5;
+						points[i].to.b = 0.6;
 						
-						points[i].from.x = moving - now;
+						points[i].from.x = moving - initial;
 						points[i].from.y = miny;
 						points[i].from.r = 0.1;
 						points[i].from.g = 0.1;
-						points[i].from.b = 0.5;
+						points[i].from.b = 0.6;
 						i++, tm.tm_mday += 7;
 					}
 				}
 				
 				// months (3 years)
-/*				if (span < 3 * 365 * 24 * 60 * 60)*/
+				if (span < 3 * 365 * 24 * 60 * 60)
 				{
 					struct tm tm = mintm;
 					tm.tm_mon = 0;
 					
-					while (i < 400 && (false
+					while (i < 800 && (false
 						|| tm.tm_mon < 12
 						|| tm.tm_year < maxtm.tm_year))
 					{
@@ -441,58 +447,137 @@ int main(int argc, char* const* argv)
 						
 						time_t moving = mktime(&tm);
 						
-						points[i].to.x = moving - now;
+						points[i].to.x = moving - initial;
 						points[i].to.y = maxy;
-						points[i].to.r = 0.5;
+						points[i].to.r = 0.6;
 						points[i].to.g = 0.1;
-						points[i].to.b = 0.5;
+						points[i].to.b = 0.6;
 						
-						points[i].from.x = moving - now;
+						points[i].from.x = moving - initial;
 						points[i].from.y = miny;
-						points[i].from.r = 0.5;
+						points[i].from.r = 0.6;
 						points[i].from.g = 0.1;
-						points[i].from.b = 0.5;
+						points[i].from.b = 0.6;
 						i++, tm.tm_mon++;
 					}
 				}
 			}
 			
+			// horizontal gridlines:
+			{
+				double span = maxy - miny;
+				
+				// cents (3 dollars)
+				if (span < 3)
+				{
+					for (double starty  = miny - remainder(miny, 0.01),
+								  endy  = maxy - remainder(maxy, 0.01);
+								starty <= endy;
+								starty += 0.01)
+					{
+						points[i].to.x = maxx;
+						points[i].to.y = starty;
+						points[i].to.r = 0.6;
+						points[i].to.g = 0.1;
+						points[i].to.b = 0.1;
+						
+						points[i].from.x = minx;
+						points[i].from.y = starty;
+						points[i].from.r = 0.6;
+						points[i].from.g = 0.1;
+						points[i].from.b = 0.1;
+						i++;
+					}
+				}
+				
+				// dollars (300 dollars)
+				if (span < 300)
+				{
+					for (double starty  = miny - remainder(miny, 1),
+								  endy  = maxy - remainder(maxy, 1);
+								starty <= endy && i < 800;
+								starty += 1)
+					{
+						points[i].to.x = maxx;
+						points[i].to.y = starty;
+						points[i].to.r = 0.6;
+						points[i].to.g = 0.6;
+						points[i].to.b = 0.1;
+						
+						points[i].from.x = minx;
+						points[i].from.y = starty;
+						points[i].from.r = 0.6;
+						points[i].from.g = 0.6;
+						points[i].from.b = 0.1;
+						i++;
+					}
+				}
+				
+				// 100 dollars (3,000 dollars)
+				if (span < 3 * 1000)
+				{
+					for (double starty  = miny - remainder(miny, 100),
+								  endy  = maxy - remainder(maxy, 100);
+								starty <= endy && i < 800;
+								starty += 100)
+					{
+						points[i].to.x = maxx;
+						points[i].to.y = starty;
+						points[i].to.r = 0.1;
+						points[i].to.g = 0.6;
+						points[i].to.b = 0.1;
+						
+						points[i].from.x = minx;
+						points[i].from.y = starty;
+						points[i].from.r = 0.1;
+						points[i].from.g = 0.6;
+						points[i].from.b = 0.1;
+						i++;
+					}
+				}
+				
+				// 1000 dollars (50,000 dollars)
+				if (span < 50 * 1000)
+				{
+					for (double starty  = miny - remainder(miny, 1000),
+								  endy  = maxy - remainder(maxy, 1000);
+								starty <= endy && i < 800;
+								starty += 1000)
+					{
+						points[i].to.x = maxx;
+						points[i].to.y = starty;
+						points[i].to.r = 0.1;
+						points[i].to.g = 0.6;
+						points[i].to.b = 0.6;
+						
+						points[i].from.x = minx;
+						points[i].from.y = starty;
+						points[i].from.r = 0.1;
+						points[i].from.g = 0.6;
+						points[i].from.b = 0.6;
+						i++;
+					}
+				}
+			}
+			
 			// horizontal axis:
-			if (i < 400)
+			if (i < 800)
 			{
 				points[i].to.x = maxx;
 				points[i].to.y = 0;
-				points[i].to.r = 0.75;
-				points[i].to.g = 0.1;
-				points[i].to.b = 0.1;
+				points[i].to.r = 0;
+				points[i].to.g = 0;
+				points[i].to.b = 0;
 				
 				points[i].from.x = minx;
 				points[i].from.y = 0;
-				points[i].from.r = 0.75;
-				points[i].from.g = 0.1;
-				points[i].from.b = 0.1;
+				points[i].from.r = 0;
+				points[i].from.g = 0;
+				points[i].from.b = 0;
 				i++;
 			}
 			
-			assert(i <= 400);
-			
-			#if 0
-			// vertical axis:
-			{
-				points[i].to.x = 0;
-				points[i].to.y = maxy;
-				points[i].to.r = 0.1;
-				points[i].to.g = 0.1;
-				points[i].to.b = 0.75;
-				
-				points[i].from.x = 0;
-				points[i].from.y = miny;
-				points[i].from.r = 0.1;
-				points[i].from.g = 0.1;
-				points[i].from.b = 0.75;
-				i++;
-			}
-			#endif
+			assert(i <= 800);
 			
 			glNamedBufferData(grid.buffer, sizeof(points), points, GL_DYNAMIC_DRAW);
 		}
@@ -621,16 +706,32 @@ int main(int argc, char* const* argv)
 				update_grid();
 			}
 			
-			glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+			glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 			
 			glClear(GL_COLOR_BUFFER_BIT);
 			
 			glUseProgram(program_id);
 			
+			time(&now);
+			
+			points[800].to.x = now - initial;
+			points[800].to.y = maxy;
+			points[800].to.r = 0;
+			points[800].to.g = 0;
+			points[800].to.b = 0;
+			
+			points[800].from.x = now - initial;
+			points[800].from.y = miny;
+			points[800].from.r = 0;
+			points[800].from.g = 0;
+			points[800].from.b = 0;
+			
+			glNamedBufferData(grid.buffer, sizeof(points), points, GL_DYNAMIC_DRAW);
+			
 			glLineWidth(2);
 			glBindVertexArray(grid.vertex_array);
 			{
-				glDrawArrays(GL_LINES, 0, 2 * 400);
+				glDrawArrays(GL_LINES, 0, 2 * (800 + 1));
 			}
 			glBindVertexArray(0);
 			
@@ -640,7 +741,6 @@ int main(int argc, char* const* argv)
 				glDrawArrays(GL_LINE_STRIP, 0, plotme.n);
 			}
 			glBindVertexArray(0);
-			
 			
 			glfwSwapBuffers(window);
 		}
